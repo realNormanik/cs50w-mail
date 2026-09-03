@@ -198,36 +198,42 @@ def register(request):
 @login_required
 def upload_image(request):
     if request.method != 'POST':
-        return JsonResponse(
-            {'error': 'POST request required.'},
-            status=400
-        )
+        return JsonResponse({
+            'error': 'POST request required.'
+        }, status=400)
 
     image = request.FILES.get('image')
 
     if not image:
-        return JsonResponse(
-            {'error': 'No image provided.'},
-            status=400
-        )
+        return JsonResponse({
+            'error': 'No image provided.'
+        }, status=400)
 
     try:
-        # Read uploaded image into memory
+        import vercel_blob
+
         image_data = image.read()
 
-        # Store image in Vercel Blob
         blob = vercel_blob.put(
             f'uploads/{image.name}',
-            image_data
+            image_data,
+            {
+                'addRandomSuffix': 'true'
+            }
         )
+
+        print("Vercel Blob response:", blob)
 
         return JsonResponse({
             'url': blob['url']
         })
 
     except Exception as error:
-        print(f"Vercel Blob upload error: {error}")
+        print("====================================")
+        print("VERCEL BLOB UPLOAD ERROR:")
+        print(repr(error))
+        print("====================================")
 
         return JsonResponse({
-            'error': 'Failed to upload image.'
+            'error': str(error)
         }, status=500)
