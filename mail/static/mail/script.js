@@ -362,38 +362,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Custom image uploader for Quill
         quill.getModule('toolbar').addHandler('image', () => {
-            const input = document.createElement('input');
-            input.setAttribute('type', 'file');
-            input.setAttribute('accept', 'image/*');
-            input.click();
+    const range = quill.getSelection();
 
-            input.onchange = async () => {
-                const file = input.files[0];
-                if (file) {
-                    const formData = new FormData();
-                    formData.append('image', file);
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
 
-                    try {
-                        const response = await fetch('/upload-image', {
-                            method: 'POST',
-                            body: formData,
-                        });
+    input.onchange = async () => {
+        const file = input.files[0];
 
-                        if (response.ok) {
-                            const data = await response.json();
-                            const imageUrl = data.url;
+        if (!file) {
+            return;
+        }
 
-                            const range = quill.getSelection();
-                            quill.insertEmbed(range.index, 'image', imageUrl);
-                        } else {
-                            console.error('Failed to upload image');
-                        };
-                    } catch (error) {
-                        console.error('Error uploading image:', error);
-                    };
-                };
-            };
-        });
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await fetch('/upload-image', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error('Failed to upload image:', data);
+                return;
+            }
+
+            const imageUrl = data.url;
+
+            const insertIndex = range
+                ? range.index
+                : quill.getLength();
+
+            quill.insertEmbed(
+                insertIndex,
+                'image',
+                imageUrl
+            );
+
+            quill.setSelection(insertIndex + 1);
+
+        } catch (error) {
+            console.error('Error uploading image:', error);
+        }
+    };
+
+    input.click();
+});
 
         const form = document.querySelector('#compose-form');
 

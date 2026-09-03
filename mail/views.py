@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import default_storage
+import vercel_blob
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib import messages
@@ -195,10 +195,39 @@ def register(request):
 
 
 @csrf_exempt
+@login_required
 def upload_image(request):
-    if request.method == 'POST' and request.FILES.get('image'):
-        image = request.FILES['image']
-        file_path = default_storage.save(f'uploads/{image.name}', image)
-        file_url = default_storage.url(file_path)
-        return JsonResponse({'url': file_url})
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+    if request.method != 'POST':
+        return JsonResponse(
+            {'error': 'POST request required.'},
+            status=400
+        )
+
+    image = request.FILES.get('image')
+
+    if not image:
+        return JsonResponse(
+            {'error': 'No image provided.'},
+            status=400
+        )
+
+    try:
+        # Read uploaded image into memory
+        image_data = image.read()
+
+        # Store image in Vercel Blob
+        blob = vercel_blob.put(
+            f'uploads/{image.name}',
+            image_data
+        )
+
+        return JsonResponse({
+            'url': blob['url']
+        })
+
+    except Exception as error:
+        print(f"Vercel Blob upload error: {error}")
+
+        return JsonResponse({
+            'error': 'Failed to upload image.'
+        }, status=500)
