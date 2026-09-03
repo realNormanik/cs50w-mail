@@ -3,3 +3,4 @@ social-auth-app-django
 requests
 psycopg[binary]
 dj-database-url
+python-dotenv
